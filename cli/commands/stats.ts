@@ -1,7 +1,7 @@
 import type { Command } from "commander";
-import { createDataClient } from "../lib/data-client";
+import { createDataClient, getActiveMode } from "../lib/data-client";
 import { formatStatsTable } from "../lib/format";
-import { info, error } from "../lib/output";
+import { info, error, modeBanner } from "../lib/output";
 
 export function registerStatsCommand(program: Command) {
   const cmd = program
@@ -9,6 +9,8 @@ export function registerStatsCommand(program: Command) {
     .description("Show question database statistics")
     .action(async () => {
       try {
+        const { mode, remote } = getActiveMode();
+        modeBanner(mode, remote?.apiUrl);
         const client = createDataClient();
         const stats = await client.getStats();
 

@@ -15,3 +15,8 @@ export function info(msg: string) {
 export function warn(msg: string) {
   console.log(pc.yellow(msg));
 }
+
+export function modeBanner(mode: "local" | "remote", detail?: string) {
+  const label = mode === "local" ? "local (SQLite)" : `remote (${detail})`;
+  console.log(pc.dim(`[${label}]`));
+}

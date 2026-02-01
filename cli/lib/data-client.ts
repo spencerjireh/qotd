@@ -1,6 +1,34 @@
-import { getRemoteConfig } from "./config";
+import { getRemoteConfig, promptRemoteConfig } from "./config";
 import { HttpDataClient } from "./data-client-http";
 import { PrismaDataClient } from "./data-client-prisma";
+
+export type ModeOverride = "local" | "remote" | null;
+
+let modeOverride: ModeOverride = null;
+
+export function setModeOverride(mode: ModeOverride): void {
+  modeOverride = mode;
+  cachedClient = null;
+}
+
+export function getModeOverride(): ModeOverride {
+  return modeOverride;
+}
+
+export function getActiveMode(): { mode: "local" | "remote"; remote?: { apiUrl: string } } {
+  if (modeOverride === "local") {
+    return { mode: "local" };
+  }
+  if (modeOverride === "remote") {
+    const remote = getRemoteConfig();
+    return { mode: "remote", remote: remote ? { apiUrl: remote.apiUrl } : undefined };
+  }
+  const remote = getRemoteConfig();
+  if (remote) {
+    return { mode: "remote", remote: { apiUrl: remote.apiUrl } };
+  }
+  return { mode: "local" };
+}
 
 export interface QuestionData {
   id: number;
@@ -77,8 +105,37 @@ export interface DataClient {
 
 let cachedClient: DataClient | null = null;
 
+export async function ensureRemoteConfig(): Promise<void> {
+  if (modeOverride !== "remote") return;
+  const remote = getRemoteConfig();
+  if (remote) return;
+
+  if (!process.stdin.isTTY) {
+    console.error(
+      "Error: --remote requires remote config. Set QOTD_API_URL and QOTD_API_KEY, or create .qotdrc."
+    );
+    process.exit(1);
+  }
+
+  await promptRemoteConfig();
+}
+
 export function createDataClient(): DataClient {
   if (cachedClient) return cachedClient;
+
+  if (modeOverride === "local") {
+    cachedClient = new PrismaDataClient();
+    return cachedClient;
+  }
+
+  if (modeOverride === "remote") {
+    const remote = getRemoteConfig();
+    if (!remote) {
+      throw new Error("Remote config not available. Call ensureRemoteConfig() first.");
+    }
+    cachedClient = new HttpDataClient(remote.apiUrl, remote.apiKey);
+    return cachedClient;
+  }
 
   const remote = getRemoteConfig();
   if (remote) {

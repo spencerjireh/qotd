@@ -19,7 +19,28 @@ const bodyFont = Instrument_Sans({
 
 export const metadata: Metadata = {
   title: "Question of the Day Generator",
-  description: "Generate and spin questions with customizable filters",
+  description: "Generate and spin engaging questions with customizable filters",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-icon.png",
+  },
+  manifest: "/site.webmanifest",
+  openGraph: {
+    title: "Question of the Day Generator",
+    description: "Generate and spin engaging questions with customizable filters",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Question of the Day Generator",
+    description: "Generate and spin engaging questions with customizable filters",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({

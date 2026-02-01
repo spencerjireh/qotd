@@ -3,7 +3,8 @@ import { createSpinner } from "nanospinner";
 import { runQotdAgent } from "../lib/agent";
 import type { ProgressEvent } from "../lib/agent";
 import { formatSummaryTable } from "../lib/format";
-import { info, error, success, warn } from "../lib/output";
+import { info, error, success, warn, modeBanner } from "../lib/output";
+import { getActiveMode } from "../lib/data-client";
 import pc from "picocolors";
 
 function buildGeneratePrompt({
@@ -49,6 +50,8 @@ export function registerGenerateCommand(program: Command) {
     .option("--dry-run", "Preview without inserting", false)
     .action(async (options) => {
       try {
+        const { mode, remote } = getActiveMode();
+        modeBanner(mode, remote?.apiUrl);
         const count = parseInt(options.count, 10);
         if (isNaN(count) || count < 1) {
           cmd.error("--count must be a positive integer", { exitCode: 1 });

@@ -1,6 +1,6 @@
 import type { Command } from "commander";
-import { createDataClient } from "../lib/data-client";
-import { success, error } from "../lib/output";
+import { createDataClient, getActiveMode } from "../lib/data-client";
+import { success, error, modeBanner } from "../lib/output";
 
 export function registerEditCommand(program: Command) {
   const cmd = program
@@ -12,6 +12,8 @@ export function registerEditCommand(program: Command) {
     .option("-c, --categories <ids>", "New category IDs (comma-separated)")
     .action(async (id: string, options: { text?: string; level?: number; categories?: string }) => {
       try {
+        const { mode, remote } = getActiveMode();
+        modeBanner(mode, remote?.apiUrl);
         const questionId = Number(id);
         if (isNaN(questionId)) {
           cmd.error("Invalid ID", { exitCode: 1 });

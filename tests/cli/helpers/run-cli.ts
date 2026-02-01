@@ -24,7 +24,7 @@ export function runCli(
   return new Promise((resolve) => {
     execFile(
       "npx",
-      ["tsx", CLI_ENTRY, ...args],
+      ["tsx", CLI_ENTRY, "--local", ...args],
       {
         cwd: PROJECT_ROOT,
         env: {

@@ -1,7 +1,7 @@
 import type { Command } from "commander";
-import { createDataClient } from "../lib/data-client";
+import { createDataClient, getActiveMode } from "../lib/data-client";
 import { formatQuestionsTable } from "../lib/format";
-import { info, error } from "../lib/output";
+import { info, error, modeBanner } from "../lib/output";
 
 export function registerListCommand(program: Command) {
   const cmd = program
@@ -12,6 +12,8 @@ export function registerListCommand(program: Command) {
     .option("-s, --search <text>", "Search question text")
     .action(async (options) => {
       try {
+        const { mode, remote } = getActiveMode();
+        modeBanner(mode, remote?.apiUrl);
         const client = createDataClient();
         const questions = await client.listQuestions({
           category: options.category,

@@ -1,5 +1,7 @@
 import { readFileSync, writeFileSync, unlinkSync, existsSync } from "fs";
 import { resolve } from "path";
+import { input, confirm } from "@inquirer/prompts";
+import pc from "picocolors";
 
 export interface QotdConfig {
   apiUrl?: string;
@@ -45,4 +47,59 @@ export function getRemoteConfig(): { apiUrl: string; apiKey: string } | null {
   }
 
   return null;
+}
+
+export async function promptRemoteConfig(): Promise<{ apiUrl: string; apiKey: string }> {
+  const config = loadConfig();
+  const apiUrl = await input({
+    message: "API URL:",
+    default: config.apiUrl || "http://localhost:3000",
+  });
+
+  const apiKey = await input({
+    message: "API Key:",
+    default: config.apiKey || "",
+  });
+
+  if (!apiUrl || !apiKey) {
+    console.error(pc.red("Error: Both API URL and API Key are required."));
+    process.exit(1);
+  }
+
+  // Test connectivity
+  console.log(pc.cyan("Testing connection..."));
+  try {
+    const testUrl = `${apiUrl.replace(/\/$/, "")}/api/categories`;
+    const res = await fetch(testUrl, {
+      headers: { "x-api-key": apiKey },
+    });
+
+    if (!res.ok) {
+      console.log(pc.yellow(`Server responded with ${res.status}. Config saved anyway.`));
+    } else {
+      console.log(pc.green("Connection successful."));
+    }
+  } catch (e) {
+    console.log(
+      pc.yellow(
+        `Could not connect to ${apiUrl}: ${e instanceof Error ? e.message : String(e)}. Config saved anyway.`
+      )
+    );
+  }
+
+  const shouldSave = await confirm({
+    message: "Save this config to .qotdrc for future use?",
+    default: true,
+  });
+
+  if (shouldSave) {
+    saveConfig({ apiUrl, apiKey });
+    console.log(pc.green(`Remote config saved to .qotdrc.`));
+  }
+
+  // Set env vars for this session so getRemoteConfig() picks them up
+  process.env.QOTD_API_URL = apiUrl;
+  process.env.QOTD_API_KEY = apiKey;
+
+  return { apiUrl, apiKey };
 }

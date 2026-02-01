@@ -1,8 +1,8 @@
 import type { Command } from "commander";
 import { confirm } from "@inquirer/prompts";
 import { ExitPromptError } from "@inquirer/core";
-import { createDataClient } from "../lib/data-client";
-import { success, error, warn, info } from "../lib/output";
+import { createDataClient, getActiveMode } from "../lib/data-client";
+import { success, error, warn, info, modeBanner } from "../lib/output";
 
 export function registerDeleteCommand(program: Command) {
   const cmd = program
@@ -13,6 +13,8 @@ export function registerDeleteCommand(program: Command) {
     .option("-y, --yes", "Skip confirmation prompts")
     .action(async (ids: string[], options: { all?: boolean; yes?: boolean }) => {
       try {
+        const { mode, remote } = getActiveMode();
+        modeBanner(mode, remote?.apiUrl);
         const client = createDataClient();
 
         if (options.all) {

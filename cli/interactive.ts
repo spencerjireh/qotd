@@ -1,9 +1,9 @@
 import type { Command } from "commander";
 import { select, confirm, input, number } from "@inquirer/prompts";
 import { ExitPromptError } from "@inquirer/core";
-import { createDataClient } from "./lib/data-client";
-import { loadConfig, saveConfig, clearConfig, getRemoteConfig } from "./lib/config";
-import { info, error, success, warn } from "./lib/output";
+import { createDataClient, getActiveMode, getModeOverride } from "./lib/data-client";
+import { clearConfig, getRemoteConfig, promptRemoteConfig } from "./lib/config";
+import { info, error, success } from "./lib/output";
 import {
   buildGenerateArgs,
   buildListArgs,
@@ -11,6 +11,13 @@ import {
   buildDeleteArgs,
   buildStatsArgs,
 } from "./lib/interactive-args";
+
+function currentModeFlag(): string | undefined {
+  const override = getModeOverride();
+  if (override === "local") return "--local";
+  if (override === "remote") return "--remote";
+  return undefined;
+}
 
 export async function runInteractiveMode(program: Command) {
   try {
@@ -21,16 +28,25 @@ export async function runInteractiveMode(program: Command) {
       process.exit(1);
     }
 
+    const { mode, remote } = getActiveMode();
+    const modeLabel = mode === "local" ? "local" : `remote: ${remote?.apiUrl}`;
+    const override = getModeOverride();
+
+    const choices: { name: string; value: string }[] = [
+      { name: "Generate questions", value: "generate" },
+      { name: "List questions", value: "list" },
+      { name: "Edit a question", value: "edit" },
+      { name: "Delete questions", value: "delete" },
+      { name: "View statistics", value: "stats" },
+    ];
+
+    if (override !== "local") {
+      choices.push({ name: "Configure remote", value: "configure" });
+    }
+
     const command = await select({
-      message: "What would you like to do?",
-      choices: [
-        { name: "Generate questions", value: "generate" },
-        { name: "List questions", value: "list" },
-        { name: "Edit a question", value: "edit" },
-        { name: "Delete questions", value: "delete" },
-        { name: "View statistics", value: "stats" },
-        { name: "Configure remote", value: "configure" },
-      ],
+      message: `[${modeLabel}] What would you like to do?`,
+      choices,
     });
 
     switch (command) {
@@ -107,7 +123,7 @@ async function promptAndRunGenerate(program: Command) {
     default: false,
   });
 
-  const args = buildGenerateArgs({ count: count ?? 5, category, level, dryRun });
+  const args = buildGenerateArgs({ count: count ?? 5, category, level, dryRun }, currentModeFlag());
   program.parse(args);
 }
 
@@ -128,7 +144,7 @@ async function promptAndRunList(program: Command) {
     default: "",
   });
 
-  const args = buildListArgs({ category, level, search });
+  const args = buildListArgs({ category, level, search }, currentModeFlag());
   program.parse(args);
 }
 
@@ -163,7 +179,7 @@ async function promptAndRunEdit(program: Command) {
     return;
   }
 
-  const args = buildEditArgs({ id, text, level, categories });
+  const args = buildEditArgs({ id, text, level, categories }, currentModeFlag());
   program.parse(args);
 }
 
@@ -185,14 +201,14 @@ async function promptAndRunDelete(program: Command) {
       error("No IDs provided.");
       return;
     }
-    program.parse(buildDeleteArgs({ mode: "by-id", ids }));
+    program.parse(buildDeleteArgs({ mode: "by-id", ids }, currentModeFlag()));
   } else {
-    program.parse(buildDeleteArgs({ mode: "all", ids: [] }));
+    program.parse(buildDeleteArgs({ mode: "all", ids: [] }, currentModeFlag()));
   }
 }
 
 async function promptAndRunStats(program: Command) {
-  program.parse(buildStatsArgs());
+  program.parse(buildStatsArgs(currentModeFlag()));
 }
 
 async function promptAndRunConfigure() {
@@ -221,39 +237,5 @@ async function promptAndRunConfigure() {
     return;
   }
 
-  const config = loadConfig();
-  const apiUrl = await input({
-    message: "API URL:",
-    default: config.apiUrl || "http://localhost:3000",
-  });
-
-  const apiKey = await input({
-    message: "API Key:",
-    default: config.apiKey || "",
-  });
-
-  if (!apiUrl || !apiKey) {
-    error("Both API URL and API Key are required.");
-    return;
-  }
-
-  // Test connectivity
-  info("Testing connection...");
-  try {
-    const testUrl = `${apiUrl.replace(/\/$/, "")}/api/categories`;
-    const res = await fetch(testUrl, {
-      headers: { "x-api-key": apiKey },
-    });
-
-    if (!res.ok) {
-      warn(`Server responded with ${res.status}. Config saved anyway.`);
-    } else {
-      success("Connection successful.");
-    }
-  } catch (e) {
-    warn(`Could not connect to ${apiUrl}: ${e instanceof Error ? e.message : String(e)}. Config saved anyway.`);
-  }
-
-  saveConfig({ apiUrl, apiKey });
-  success(`Remote config saved. CLI will use ${apiUrl}.`);
+  await promptRemoteConfig();
 }
