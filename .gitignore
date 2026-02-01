@@ -140,6 +140,7 @@ scripts/uv.lock
 
 # Prisma
 prisma/dev.db
+dev.db
 
 # CLI remote config
 .qotdrc
