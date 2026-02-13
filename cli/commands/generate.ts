@@ -19,23 +19,14 @@ function buildGeneratePrompt({
   const parts: string[] = [];
 
   parts.push(`Generate exactly ${count} new QOTD questions.`);
-  parts.push(
-    "Always call list_categories first to confirm the exact category names before proposing any questions."
-  );
 
   if (category) {
-    parts.push(
-      `All questions must be in the "${category}" category. Use the exact category name as returned by list_categories.`
-    );
+    parts.push(`All questions must be in the "${category}" category.`);
   }
 
   if (level) {
     parts.push(`All questions must be at seriousness level ${level}.`);
   }
-
-  parts.push(
-    "After generating all questions, call propose_questions ONCE with the full array."
-  );
 
   return parts.join("\n");
 }
